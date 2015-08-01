@@ -6,10 +6,12 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -18,17 +20,24 @@ import android.widget.GridView;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 
 
 public class MainActivity extends AppCompatActivity {
     static final int REQUEST_IMAGE_CAPTURE = 1;
     String mCurrentPhotoPath;
+    File[] files ;
 
-//    private List<Selfie> SELFIES = new ArrayList<Selfie>();
+    private android.widget.GridView gridview;
+    private gridViewAdaper gridAdapter;
+
+
+    File storageDir = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_PICTURES);
+    String Daily = storageDir.getAbsolutePath()+"/Daily";
+
+    static ArrayList<imageArray> arrayList;
     static final int REQUEST_TAKE_PHOTO = 1;
 
     private ArrayList<Integer> mThumbIdsFlowers = new ArrayList<Integer>(
@@ -51,11 +60,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        GridView gridview = (GridView) findViewById(R.id.gridview);
+        gridview = (GridView) findViewById(R.id.gridview);
 
         // Create a new ImageAdapter and set it as the Adapter for this GridView
-        gridview.setAdapter(new gridViewAdaper(this, mThumbIdsFlowers));
-
+        gridAdapter=new gridViewAdaper(this, getData());
+        gridview.setAdapter(gridAdapter);
 
         // Set an setOnItemClickListener on the GridView
         gridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -67,14 +76,17 @@ public class MainActivity extends AppCompatActivity {
                         gridViewActivity.class);
 
                 // Add the ID of the thumbnail to display as an Intent Extra
-                intent.putExtra(EXTRA_RES_ID, (int) id);
+                intent.putExtra(EXTRA_RES_ID, position);
 
                 // Start the ImageViewActivity
                 startActivity(intent);
             }
         });
 
-        createSelfieReminders();
+//        createSelfieReminders();
+
+
+
     }
 
 
@@ -102,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
             start_Picture();
         }
         else if(id == R.id.menu_refresh){
+
             return true;
         }
 
@@ -131,9 +144,27 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-//            Bundle extras = data.getExtras();
-//            Bitmap imageBitmap = (Bitmap) extras.get("data");
+
+//            Toast.makeText(this, "Image saved to:\n" +
+//                    data.getData(), Toast.LENGTH_LONG).show();
+//            Log.d("OnActivityResult", data.getData().toString());
+
+//            Bitmap photo = (Bitmap) data.getExtras().get("data");
 //            mImageView.setImageBitmap(imageBitmap);
+
+//            To add pic to imageArray
+
+            Log.d("OnActivityResult", "Camera image save!");
+
+            imageArray imageFile = new imageArray(setPic(), mCurrentPhotoPath);
+
+            arrayList.add(imageFile);
+            gridAdapter.notifyDataSetChanged();
+
+
+//            gridview.invalidate();
+//            gridAdapter = new gridViewAdaper(this, getData());
+//            gridview.setAdapter(gridAdapter);
         }
     }
 
@@ -141,19 +172,20 @@ public class MainActivity extends AppCompatActivity {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             // Create the File where the photo should go
-//            File photoFile = null;
-//            try {
-//                photoFile = createImageFile();
-//            } catch (IOException ex) {
-//                // Error occurred while creating the File
-//                Log.e("start_Picture","error");
-//            }
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                Log.e("start_Picture", "error");
+            }
             // Continue only if the File was successfully created
-//            if (photoFile != null) {
-//                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
-//                        Uri.fromFile(photoFile));
+            if (photoFile != null) {
+                //Give a file path to save
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+                        Uri.fromFile(photoFile));
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-//            }
+            }
         }
 
 
@@ -162,24 +194,61 @@ public class MainActivity extends AppCompatActivity {
 
 
     private File createImageFile() throws IOException {
+        File image;
         // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES);
+//        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + "Test" + "_";
 
-        storageDir.mkdirs();
+        File f=new File(Daily);
+        if(!f.exists()){
+            f.mkdir();
+        }
 
 
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
+//       there is not the file so create it.
+//        if(!storageDir.exists()) {
+            image = File.createTempFile(
+                    imageFileName,  /* prefix */
+                    ".jpg",         /* suffix */
+                    f      /* directory */
+            );
+
 
         // Save a file: path for use with ACTION_VIEW intents
-        mCurrentPhotoPath = "file:" + image.getAbsolutePath();
+        mCurrentPhotoPath =  image.getAbsolutePath();
         return image;
+    }
+
+    private ArrayList<imageArray> getData(){
+        arrayList=new ArrayList<>();
+
+        File sd =new File(Daily);
+//            File sd = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        if(sd.exists()) {
+            files = sd.listFiles();
+        }
+
+        if(files == null) {
+            return arrayList;
+        }
+
+        try{
+            for(int i = 0; i<files.length; i++) {
+                mCurrentPhotoPath=files[i].getAbsolutePath();
+                Log.d("File",files[i].getAbsolutePath());
+
+
+                imageArray imageFile = new imageArray(setPic(), mCurrentPhotoPath);
+
+                arrayList.add(imageFile);
+            }
+        }
+        catch (NullPointerException e){
+            e.printStackTrace();
+        }
+
+
+        return arrayList;
     }
 
     private Bitmap setPic() {
@@ -190,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
         // Get the dimensions of the bitmap
         BitmapFactory.Options bmOptions = new BitmapFactory.Options();
         bmOptions.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+//        BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
         int photoW = bmOptions.outWidth;
         int photoH = bmOptions.outHeight;
 

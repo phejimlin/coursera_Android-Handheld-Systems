@@ -21,7 +21,11 @@ public class gridViewActivity extends Activity {
         ImageView imageView = new ImageView(getApplicationContext());
 
         // Get the ID of the image to display and set it as the image for this ImageView
-        imageView.setImageResource(intent.getIntExtra(MainActivity.EXTRA_RES_ID, 0));
+//        imageView.setImageResource(intent.getIntExtra(MainActivity.EXTRA_RES_ID, 0));
+
+        int position=intent.getIntExtra(MainActivity.EXTRA_RES_ID,0);
+        imageView.setImageBitmap(MainActivity.arrayList.get(position).getImage());
+
 
         setContentView(imageView);
     }
